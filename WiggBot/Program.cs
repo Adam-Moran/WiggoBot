@@ -1,9 +1,7 @@
 ﻿using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.VoiceNext;
-using Newtonsoft.Json;
 using System;
-using System.IO;
 using System.Threading.Tasks;
 
 namespace WiggBot
@@ -12,17 +10,26 @@ namespace WiggBot
     {
         private static DiscordClient mDiscord;
         private static CommandsNextModule mCommands;
-        private static VoiceNextClient mVoice;
+        private static DropboxFileAccessor mDPFileAccessor;
 
         private static void Main()
         {
-            if (!TryReadConfiguration(out var token))
+            try
             {
-                return;
-            }
+                mDPFileAccessor = DropboxFileAccessor.GetFiles().GetAwaiter().GetResult();
+                var prog = new Program();
 
-            var prog = new Program();
-            prog.MainAsync(token).GetAwaiter().GetResult();
+                prog.MainAsync(mDPFileAccessor.Settings.Token).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                Console.Write(ex.Message);
+                Console.ReadKey();
+            }
+            finally
+            {
+                mDPFileAccessor.Dispose();
+            }
         }
 
         private async Task MainAsync(string token)
@@ -42,7 +49,7 @@ namespace WiggBot
                 StringPrefix = ";;"
             });
 
-            mVoice = mDiscord.UseVoiceNext(new VoiceNextConfiguration
+            mDiscord.UseVoiceNext(new VoiceNextConfiguration
             {
                 EnableIncoming = true
             });
@@ -62,34 +69,6 @@ namespace WiggBot
                 if (e.Message.Content.StartsWith("hippo", StringComparison.OrdinalIgnoreCase))
                     await e.Message.RespondAsync("Matt Lawrence is shit at Fortnite");
             };
-        }
-
-        private static bool TryReadConfiguration(out string token)
-        {
-            token = string.Empty;
-
-            try
-            {
-                using (var reader = new StreamReader("settings.json"))
-                {
-                    var content = reader.ReadToEnd();
-
-                    var configuration = JsonConvert.DeserializeObject<Configuration>(content);
-                    token = configuration.Token;
-
-                    return !String.IsNullOrEmpty(token);
-                }
-            }
-            catch (FileNotFoundException)
-            {
-                return false;
-            }
-
-        }
-
-        private class Configuration
-        {
-            public string Token { get; set; }
         }
     }
 }
