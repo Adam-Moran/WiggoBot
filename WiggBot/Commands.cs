@@ -13,6 +13,8 @@ namespace WiggBot
 {
     internal class Commands
     {
+        private readonly static DropboxFileAccessor mDropboxFileAccessor = DropboxFileAccessor.Instance;
+
         private ConcurrentDictionary<uint, Process> mFfmpegs;
 
         [Command("hi")]
@@ -38,7 +40,13 @@ namespace WiggBot
 
                 vnc = await vnext.ConnectAsync(chn);
 
-                await Talk(ctx, "C:\\Temp\\aloha.wav");
+                if (mDropboxFileAccessor.SoundsByName.TryGetValue("aloha", out var filePath))
+                {
+                    await Talk(ctx, filePath);
+                }
+
+                mFfmpegs = new ConcurrentDictionary<uint, Process>();
+                vnc.VoiceReceived += OnVoiceReceived;
             }
             catch (InvalidOperationException ex)
             {
@@ -58,7 +66,11 @@ namespace WiggBot
                 if (vnc == null)
                     throw new InvalidOperationException("Not connected in this guild.");
                 this.mFfmpegs = null;
-                await Talk(ctx, "C:\\Temp\\goodbye.wav");
+
+                if (mDropboxFileAccessor.SoundsByName.TryGetValue("goodbye", out var filePath))
+                {
+                    await Talk(ctx, filePath);
+                }
                 vnc.Disconnect();
             }
             catch (InvalidOperationException ex)
@@ -71,40 +83,80 @@ namespace WiggBot
         [Command("matt")]
         public async Task PlayMatt(CommandContext ctx)
         {
-            await Talk(ctx, "C:\\Temp\\sweden.wav");
+            if (mDropboxFileAccessor.SoundsByName.TryGetValue("sweden", out var filePath))
+            {
+                await Talk(ctx, filePath);
+            }
+        }
+
+        [Command("fortnite")]
+        public async Task Fortnite(CommandContext ctx)
+        {
+            if (mDropboxFileAccessor.SoundsByName.TryGetValue("fortnite", out var filePath))
+            {
+                await Talk(ctx, filePath);
+            }
+        }
+
+        [Command("gillette")]
+        public async Task Gillette(CommandContext ctx)
+        {
+            if (mDropboxFileAccessor.SoundsByName.TryGetValue("gillette", out var filePath))
+            {
+                await Talk(ctx, filePath);
+            }
+        }
+
+        [Command("bestaman")]
+        public async Task BestAMan(CommandContext ctx)
+        {
+            if (mDropboxFileAccessor.SoundsByName.TryGetValue("bestman", out var filePath))
+            {
+                await Talk(ctx, filePath);
+            }
         }
 
         [Command("alone")]
         public async Task PlayAlone(CommandContext ctx)
         {
-            await Talk(ctx, "C:\\Temp\\alonenow.wav");
+            if (mDropboxFileAccessor.SoundsByName.TryGetValue("alonenow", out var filePath))
+            {
+                await Talk(ctx, filePath);
+            }
         }
 
         [Command("sorry")]
         public async Task Play(CommandContext ctx)
         {
-            await Talk(ctx, "C:\\Temp\\wormsorry.wav");
+            if (mDropboxFileAccessor.SoundsByName.TryGetValue("wormsorry", out var filePath))
+            {
+                await Talk(ctx, filePath);
+            }
         }
 
         public async Task OnVoiceReceived(VoiceReceiveEventArgs ea)
         {
-            if (!this.mFfmpegs.ContainsKey(ea.SSRC))
-            {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "ffmpeg",
-                    Arguments = $@"-ac 2 -f s16le -ar 48000 -i pipe:0 -ac 2 -ar 44100 {ea.SSRC}.wav",
-                    RedirectStandardInput = true
-                };
 
-                this.mFfmpegs.TryAdd(ea.SSRC, Process.Start(psi));
-            }
+            var eventDetails = ea;
+            await ea.Client.Guilds.Values.First().Channels.First().SendMessageAsync(eventDetails.User.Username);
 
-            var buff = ea.Voice.ToArray();
+            //if (!this.mFfmpegs.ContainsKey(ea.SSRC))
+            //{
+            //    var psi = new ProcessStartInfo
+            //    {
+            //        FileName = "ffmpeg",
+            //        Arguments = $@"-ac 2 -f s16le -ar 48000 -i pipe:0 -ac 2 -ar 44100 {ea.SSRC}.wav",
+            //        RedirectStandardInput = true
+            //    };
 
-            var ffmpeg = this.mFfmpegs[ea.SSRC];
-            await ffmpeg.StandardInput.BaseStream.WriteAsync(buff, 0, buff.Length);
-            await ffmpeg.StandardInput.BaseStream.FlushAsync();
+            //    this.mFfmpegs.TryAdd(ea.SSRC, Process.Start(psi));
+            //}
+
+            //var buff = ea.Voice.ToArray();
+
+            //var ffmpeg = this.mFfmpegs[ea.SSRC];
+            //await ffmpeg.StandardInput.BaseStream.WriteAsync(buff, 0, buff.Length);
+            //await ffmpeg.StandardInput.BaseStream.FlushAsync();
         }
 
         private static async Task Talk(CommandContext ctx, string file)

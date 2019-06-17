@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace WiggBot
 {
-    internal class DropboxFileAccessor : IDisposable
+    internal sealed class DropboxFileAccessor
     {
         private const string SETTINGS_FILE_NAME = "settings.json";
         private const string SOUNDS_PATH = "/Sounds";
@@ -18,11 +18,13 @@ namespace WiggBot
         {
         }
 
+        public static DropboxFileAccessor Instance { get; private set; } = new DropboxFileAccessor();
+
         public Settings Settings { get; private set; }
 
-        public ConcurrentDictionary<string, string> SoundsByName { get; set; } = new ConcurrentDictionary<string, string>();
+        public ConcurrentDictionary<string, string> SoundsByName { get; private set; } = new ConcurrentDictionary<string, string>();
 
-        public async static Task<DropboxFileAccessor> GetFiles()
+        public async Task GetFiles()
         {
             using (var dbx = new DropboxClient("oKgzOptcURAAAAAAAAAAK3U_JbX6JjhHpIyv7rTDpuZRU9v5RFzL6eKg-Hv9JhGw"))
             {
@@ -31,14 +33,12 @@ namespace WiggBot
 
                 if (settingsFile == null)
                 {
-                    return null;
+                    return;
                 }
-
-                var dpFileAccessor = new DropboxFileAccessor();
 
                 using (var response = await dbx.Files.DownloadAsync($"/{SETTINGS_FILE_NAME}"))
                 {
-                    dpFileAccessor.Settings = JsonConvert.DeserializeObject<Settings>(await response.GetContentAsStringAsync());
+                    Instance.Settings = JsonConvert.DeserializeObject<Settings>(await response.GetContentAsStringAsync());
                 }
 
                 var localSoundsDirectory = Path.Combine(AppContext.BaseDirectory, DOWNLOADED_SOUNDS_DIRECTORY);
@@ -54,7 +54,7 @@ namespace WiggBot
                     var name = Path.GetFileNameWithoutExtension(soundFile.Name);
                     var path = Path.Combine(localSoundsDirectory, soundFile.Name);
 
-                    dpFileAccessor.SoundsByName.TryAdd(name, path);
+                    Instance.SoundsByName.TryAdd(name, path);
 
                     if (File.Exists(path))
                     {
@@ -69,14 +69,7 @@ namespace WiggBot
                         }
                     }
                 }
-
-                return dpFileAccessor;
             }
-        }
-
-        public void Dispose()
-        {
-            throw new NotImplementedException();
         }
     }
 

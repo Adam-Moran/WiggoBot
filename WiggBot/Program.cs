@@ -8,27 +8,25 @@ namespace WiggBot
 {
     internal class Program
     {
+        private readonly static DropboxFileAccessor mDropboxFileAccessor = DropboxFileAccessor.Instance;
+
         private static DiscordClient mDiscord;
         private static CommandsNextModule mCommands;
-        private static DropboxFileAccessor mDPFileAccessor;
+
 
         private static void Main()
         {
             try
             {
-                mDPFileAccessor = DropboxFileAccessor.GetFiles().GetAwaiter().GetResult();
+                mDropboxFileAccessor.GetFiles().GetAwaiter().GetResult();
                 var prog = new Program();
 
-                prog.MainAsync(mDPFileAccessor.Settings.Token).GetAwaiter().GetResult();
+                prog.MainAsync(mDropboxFileAccessor.Settings.Token).GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
                 Console.Write(ex.Message);
                 Console.ReadKey();
-            }
-            finally
-            {
-                mDPFileAccessor.Dispose();
             }
         }
 
